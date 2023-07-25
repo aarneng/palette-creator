@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/palette-creator/static/css/main.b987eef0.css",
+    "main.js": "/palette-creator/static/js/main.2b4ac650.js",
+    "static/js/787.257d6191.chunk.js": "/palette-creator/static/js/787.257d6191.chunk.js",
+    "index.html": "/palette-creator/index.html",
+    "main.b987eef0.css.map": "/palette-creator/static/css/main.b987eef0.css.map",
+    "main.2b4ac650.js.map": "/palette-creator/static/js/main.2b4ac650.js.map",
+    "787.257d6191.chunk.js.map": "/palette-creator/static/js/787.257d6191.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.b987eef0.css",
+    "static/js/main.2b4ac650.js"
+  ]
+}
