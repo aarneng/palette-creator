@@ -1,0 +1,31 @@
+/* #container {
+    position: relative;
+}
+#container canvas, #overlay {
+    position: absolute;
+} */
+/* #container {
+    position: relative;
+    border: 1px solid black;
+    overflow: auto;
+    width: 400px;
+    height: 200px;
+} */
+
+#container {
+    display: flex;
+}
+
+#container>#overlay {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    box-shadow: rgb(255, 255, 255) 0px 0px 0px 1px inset;
+    transform: translate(6px, 6px);
+    position: absolute;
+}
+
+#canvas {
+    left: 0;
+    top: 0;
+}
