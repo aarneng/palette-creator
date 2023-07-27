@@ -1,6 +1,21 @@
 import React, { useRef, useEffect, useState } from 'react'
+import Switch from '@mui/material/Switch';
 import "./pickerFromScratch.css"
 const tinycolor = require("tinycolor2");
+
+/*
+ * 
+ * run instructions: https://github.com/gitname/react-gh-pages
+ * 
+ * TL;DW: 
+ * deploy: 
+ * npm run deploy -- -m "Deploy React app to GitHub Pages"
+ * 
+ * commit (works as normal):
+ * git add .
+ * git commit -m "Configure React app for deployment to GitHub Pages"
+ * git push origin master
+ */
 
 function PickerFromScratch() {
     return (
@@ -44,13 +59,32 @@ function PickerEditable() {
 
     const [deepPositions, setDeepPositions] = useState(
         [
-            [50, 50],
-            [80, 90],
-            [120, 200]
+            {
+                "data": [50, 50],
+                "edgePoint": true,
+                "optional": false
+            },
+            {
+                "data": [80, 90],
+                "edgePoint": false,
+                "optional": false
+            },
+            {
+                "data": [30, 170],
+                "edgePoint": false,
+                "optional": true
+            },
+            {
+                "data": [120, 200],
+                "edgePoint": true,
+                "optional": false
+            },
         ]
     )
     let positions = deepPositions
 
+    const [deepBezierChecked, setBezierChecked] = React.useState(false);
+    let bezierChecked = deepBezierChecked
     const [currentPalette, setCurrentPalette] = useState([])
 
     useEffect(() => {
@@ -102,18 +136,19 @@ function PickerEditable() {
         closestBallLenSquared = Infinity
 
         for (let i in positions) {
-            let dx = positions[i][0] - x
-            let dy = positions[i][1] - y
+            let dx = positions[i].data[0] - x
+            let dy = positions[i].data[1] - y
             let len = dx * dx + dy * dy
             if (len < closestBallLenSquared) {
                 closestBallIdx = i
                 closestBallLenSquared = len
             }
         }
+
         setDeepClosestBallIdx(closestBallIdx)
 
-        positions[closestBallIdx][0] = x
-        positions[closestBallIdx][1] = y
+        positions[closestBallIdx].data[0] = x
+        positions[closestBallIdx].data[1] = y
         setDeepPositions(positions)
         drawEverything(e)
     }
@@ -122,17 +157,32 @@ function PickerEditable() {
         ctx.strokeStyle = "#000"
         ctx.beginPath();
         ctx.moveTo(
-            positions[0][0], positions[0][1]
+            positions[0].data[0], positions[0].data[1]
         );
-        ctx.quadraticCurveTo(
-            positions[1][0], positions[1][1],
-            positions[2][0], positions[2][1]
-        );
+        let nonOptionalPoint = positions[1].data
+        let optionalPoint = positions[2].data
+        // above might change in the future, needs to be a more robust check
+        if (!bezierChecked) {
+            ctx.quadraticCurveTo(
+                nonOptionalPoint[0], nonOptionalPoint[1],
+                positions[3].data[0], positions[3].data[1]
+            );
+        }
+        else {
+            ctx.bezierCurveTo(
+                nonOptionalPoint[0], nonOptionalPoint[1],
+                optionalPoint[0], optionalPoint[1],
+                positions[3].data[0], positions[3].data[1]
+            );
+
+        }
         ctx.stroke();
     }
 
     function drawNBezierSamples(n, ctx) {
-        let bezzy = bezier(positions)
+        let positionsFiltered = positions.filter(i => !i.optional || bezierChecked)
+        positionsFiltered = positionsFiltered.map(i => i.data)
+        let bezzy = bezier(positionsFiltered)
         let squares = new Array(n)
         n = n - 1
         for (let t = 0; t <= n; t++) {
@@ -168,14 +218,16 @@ function PickerEditable() {
         const canvas = canvasRef.current
         const ctx = canvas.getContext("2d")
 
+        ctx.lineWidth = 2;
+
 
         if (e) {
             e.preventDefault()
             var rect = canvas.getBoundingClientRect()
             var x = e.clientX - rect.left
             var y = e.clientY - rect.top
-            positions[closestBallIdx][0] = x
-            positions[closestBallIdx][1] = y
+            positions[closestBallIdx].data[0] = x
+            positions[closestBallIdx].data[1] = y
             setDeepPositions(positions)
         }
 
@@ -183,18 +235,40 @@ function PickerEditable() {
         ctx.drawImage(cloned.canvas, 0, 0);
 
         drawCurve(ctx)
+        console.log(bezierChecked);
 
         for (let i in positions) {
+            if (!bezierChecked && positions[i].optional) {
+                console.log("here");
+                continue
+            }
+            let isEdgePoint = positions[i].edgePoint
             drawBall(
-                positions[i][0],
-                positions[i][1],
-                8,
+                positions[i].data[0],
+                positions[i].data[1],
+                isEdgePoint ? 8 : 4,
                 "#fff",
-                getColorAtPoint(positions[i][0], positions[i][1]),
+                isEdgePoint ?
+                    getColorAtPoint(positions[i].data[0], positions[i].data[1]) :
+                    "#000",
                 ctx
             )
         }
+        if (bezierChecked) {
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "#000"
+            ctx.strokeWidth = 1
+            ctx.beginPath();
+            ctx.moveTo(positions[0].data[0], positions[0].data[1]);
+            ctx.lineTo(positions[1].data[0], positions[1].data[1]);
+            ctx.stroke()
+            ctx.beginPath();
+            ctx.moveTo(positions[2].data[0], positions[2].data[1]);
+            ctx.lineTo(positions[3].data[0], positions[3].data[1]);
+            ctx.stroke()
 
+            ctx.lineWidth = 2;
+        }
         drawNBezierSamples(numSamples, ctx)
     }
 
@@ -208,7 +282,6 @@ function PickerEditable() {
 
     function drawBall(x, y, radius, colorOutline, colorFill, ctx) {
         ctx.strokeStyle = colorOutline
-        ctx.lineWidth = 2;
         ctx.fillStyle = colorFill
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
@@ -250,7 +323,6 @@ function PickerEditable() {
         let maxLen = Math.max(...currentPalette.map(i => i.length))
         paletteCtx.canvas.width = maxLen * paletteExportSize
         paletteCtx.canvas.height = currentPalette.length * paletteExportSize
-        console.log(paletteCanvas);
         for (let sublistIndex in currentPalette) {
             for (let index in currentPalette[sublistIndex]) {
                 let color = currentPalette[sublistIndex][index]
@@ -278,6 +350,14 @@ function PickerEditable() {
         document.body.removeChild(dlLink);
 
     }
+
+
+
+    const handleBezierCheckedChange = (event) => {
+        bezierChecked = event.target.checked
+        setBezierChecked(event.target.checked);
+        drawEverything()
+    };
 
 
     return <div>
@@ -411,6 +491,14 @@ function PickerEditable() {
         </div>
         <div>
             <button onClick={expandPalette}>Add to palette</button>
+        </div>
+        <div>
+            Use more control points?
+            <Switch
+                checked={bezierChecked}
+                onChange={handleBezierCheckedChange}
+                inputProps={{ 'aria-label': 'controlled' }}
+            />
         </div>
         <div>
             <h2>
