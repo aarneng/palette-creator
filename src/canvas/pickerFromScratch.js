@@ -47,10 +47,15 @@ function PickerEditable() {
 
     // const [ballPosition, setBallPosition] = useState(0.70);
 
-    let [deepCloned, setDeepCloned] = useState(null)
-    let [deepClosestBallIdx, setDeepClosestBallIdx] = useState(-1)
-
+    const [deepCloned, setDeepCloned] = useState(null)
     let cloned = deepCloned
+    const [canvasElement, setCanvasElement] = useState(null)
+    const [deepClosestBallIdx, setDeepClosestBallIdx] = useState(-1)
+    let closestBallIdx = deepClosestBallIdx
+    let closestBallLenSquared = Infinity
+    const [deepCanvasSize, setDeepCanvasSize] = useState(getWH());
+    let canvasSize = deepCanvasSize
+
     const canvasRef = useRef(null)
 
     const [deepPositions, setDeepPositions] = useState(
@@ -83,12 +88,24 @@ function PickerEditable() {
     let bezierChecked = deepBezierChecked
     const [currentPalette, setCurrentPalette] = useState([])
 
+    function setNumSamples(n) {
+        setDeepSamples(n)
+        numSamples = n
+        drawEverything()
+    }
+
+
+    var timeout = false;
     useEffect(() => {
         const canvas = canvasRef.current
+        // setCanvasElement(canvas)
+
+        canvas.width = canvasSize[0]
+        canvas.height = canvasSize[1]
+
         const ctx = canvas.getContext('2d', { willReadFrequently: true })
         //Our first draw
         ctx.fillStyle = '#f00000'
-        // ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
         for (let x = 0; x < ctx.canvas.width; x++) {
             let x_norm = x * 360 / ctx.canvas.width
             for (let y = 0; y < ctx.canvas.height; y++) {
@@ -103,26 +120,51 @@ function PickerEditable() {
         cloned = canvas.cloneNode(true).getContext('2d', { willReadFrequently: true });
         cloned.drawImage(canvas, 0, 0);
         setDeepCloned(cloned)
-        // setCloned(clonedCpy)
         drawEverything()
-    }, [saturation])
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [saturation, deepCanvasSize])
 
-    function setNumSamples(n) {
-        setDeepSamples(n)
-        numSamples = n
-        drawEverything()
+    function handleResize() {
+        clearTimeout(timeout);
+        timeout = setTimeout(updateSize, 200);
     }
 
-    let closestBallIdx = deepClosestBallIdx
-    let closestBallLenSquared = Infinity
+    function updateSize() {
+        let wh = getWH()
 
-    function onMouseDown(e) {
-        e.preventDefault()
-        if (e.button !== 0) {
+        if (JSON.stringify(wh) === JSON.stringify(canvasSize)) {
             return
         }
-        findAndSetClosestBallIdx(e)
-        drawEverything(e)
+
+        for (let i in positions) {
+            let point = positions[i].data
+            let x = point[0]
+            let y = point[1]
+            x = x * wh[0] / canvasSize[0]
+            y = y * wh[1] / canvasSize[1]
+            positions[i].data = [x, y]
+        }
+        setDeepPositions(positions)
+
+        canvasSize = wh
+        setDeepCanvasSize(wh);
+    }
+
+    function getWH() {
+        let w = window.screen.width
+        let h = window.screen.height
+        if (w >= 360) {
+            w = 360
+        }
+        if (w < 150) {
+            // clamp height to not have an impossibly small canvas
+            h = 150
+        }
+        else {
+            h = w
+        }
+        return [w, h]
     }
 
     function drawEverything(e) {
@@ -132,10 +174,13 @@ function PickerEditable() {
         ctx.lineWidth = 2;
 
         if (e) {
-            e.preventDefault()
             var rect = canvas.getBoundingClientRect()
             var x = e.clientX - rect.left
             var y = e.clientY - rect.top
+            if (e.type === "touchstart" || e.type === "touchmove") {
+                x = e.touches[0].clientX - rect.left
+                y = e.touches[0].clientY - rect.top
+            }
             positions[closestBallIdx].data = [x, y]
             setDeepPositions(positions)
         }
@@ -153,11 +198,15 @@ function PickerEditable() {
         drawNBezierSamples(numSamples, positions, setColors, bezierChecked, ctx, cloned)
     }
 
-    function findAndSetClosestBallIdx(e) {        
+    function findAndSetClosestBallIdx(e) {
         const canvas = canvasRef.current
         let rect = canvas.getBoundingClientRect()
         let x = e.clientX - rect.left
         let y = e.clientY - rect.top
+        if (e.type === "touchstart" || e.type === "touchmove") {
+            x = e.touches[0].clientX - rect.left
+            y = e.touches[0].clientY - rect.top
+        }
 
         closestBallIdx = -1
         closestBallLenSquared = Infinity
@@ -178,11 +227,27 @@ function PickerEditable() {
         setDeepClosestBallIdx(closestBallIdx)
     }
 
-    function onDrag(forceDraw, e) {
-        if (forceDraw || e.buttons == 1) {
-            e.preventDefault();
-            drawEverything(e)
+    function onMouseDown(e) {
+        // touch event check
+        if (e.type === "mousedown") {
+            e.preventDefault()
         }
+        if (e.type === "mousedown" && e.buttons !== 1) {
+            return
+        }
+        findAndSetClosestBallIdx(e)
+        drawEverything(e)
+    }
+
+    function onDrag(e) {
+        // touch event check
+        if (e.type === "mousemove") {
+            e.preventDefault()
+        }
+        if (e.type === "mousemove" && e.buttons !== 1) {
+            return
+        }
+        drawEverything(e)
     }
 
     function onMouseUp(e) {
@@ -210,24 +275,37 @@ function PickerEditable() {
             <ExportPalette currentPalette={currentPalette} />
         </div>
         <h2>Change palette:</h2>
-        <div id="container">
-            <canvas
-                ref={canvasRef}
-                id="canvas"
-                width="400px"
-                height="400px"
+        <div id="container"
+            style={{
+                ...(window.screen.width <= canvasSize[0] + canvasSize[0] / 5 && {
+                    flexDirection: "column"
+                }),
+                ...(window.screen.width > canvasSize[0] + canvasSize[0] / 5 && {
+                    flexDirection: "row"
+                })
+            }}
+        >
+            <div style={{ padding: "20px", paddingBottom: "0" }}>
+                <canvas
+                    ref={canvasRef}
+                    id="canvas"
+                    width="400px"
+                    height="400px"
 
-                onMouseDown={onMouseDown}
-                onMouseMove={e => onDrag(false, e)}
-                onMouseUp={onMouseUp}
+                    style={{
+                        touchAction: "none"
+                    }}
 
-                onTouchStart={onMouseDown}
-                onTouchMove={e => onDrag(true, e)}
-                onTouchEnd={onMouseUp}
-            />
-            <div>
-                <ColorPreview colors={colors} />
+                    onMouseDown={onMouseDown}
+                    onMouseMove={onDrag}
+                    onMouseUp={onMouseUp}
+
+                    onTouchStart={onMouseDown}
+                    onTouchMove={onDrag}
+                    onTouchEnd={onMouseUp}
+                />
             </div>
+            <ColorPreview colors={colors} dimensions={canvasSize} />
         </div>
         <StateEditor
             min={0.0}

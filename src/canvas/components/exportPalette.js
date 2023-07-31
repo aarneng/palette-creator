@@ -1,7 +1,7 @@
-import React, {useState} from "react";
+import React, { useState } from "react";
 
 
-export default function ExportPalette({currentPalette}) {
+export default function ExportPalette({ currentPalette }) {
 
   const [paletteExportSize, setPaletteExportSize] = useState(1)
   function onPaletteExportSizeChange(e) {
@@ -29,9 +29,6 @@ export default function ExportPalette({currentPalette}) {
         );
       }
     }
-    // const img = paletteCanvas.toDataURL('image/png').replace("image/png", "image/octet-stream")
-    // window.location.href = img;
-    // document.write('<img src="' + img + '"/>');
 
     const imgURL = paletteCanvas.toDataURL('image/png')
     var dlLink = document.createElement('a');

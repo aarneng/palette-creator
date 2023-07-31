@@ -1,16 +1,35 @@
 import React from "react";
 import PreviewSwatch from "./previewSwatch";
+import "./colorPreview.css"
 
 
-export default function ColorPreview({ colors }) {
+export default function ColorPreview({ colors, dimensions }) {
+
+  let size = dimensions[0]
+
+  // if (size === window.screen.width) {
+
+  // }
+
+  // if (colors)
 
   return (
-    colors.map((currElement, index) => <PreviewSwatch
-      key={index}
-      color={currElement}
-      size={400 / colors.length}
-      id={"previewSwatch" + index}
-    />
-    )
+    <div id="colorPreview"
+      style={{
+        ...(window.screen.width <= size + size / 5 && {
+          display: "flex"
+        })
+      }}
+    >
+      {
+        colors.map((currElement, index) => <PreviewSwatch
+          key={index}
+          color={currElement}
+          size={Math.min(size / colors.length, size / 5)}
+          id={"previewSwatch" + index}
+        />
+        )
+      }
+    </div>
   )
 }

@@ -32,6 +32,7 @@ function drawAllBalls(positions, bezierChecked, cloned, ctx) {
       continue
     }
     let isEdgePoint = positions[i].edgePoint
+
     drawBall(
       positions[i].data[0],
       positions[i].data[1],

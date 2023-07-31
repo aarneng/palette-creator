@@ -9,7 +9,7 @@ function Canvas() {
             style={{ display: "flex", justifyContent: "space-around" }}
         >
             <div className="sketchpicker">
-                <h6>Sketch Picker</h6>
+                <h1>Palette editor:</h1>
                 <div>
                     <PickerEditable />
                 </div>

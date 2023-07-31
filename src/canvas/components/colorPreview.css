@@ -1,0 +1,11 @@
+#colorPreview {
+    display: block;
+    /* width: var(--canvas-max-width); */
+}
+
+
+/* @media screen and (max-width: 500px) {
+    #colorPreview {
+        display: flex;
+    }
+} */

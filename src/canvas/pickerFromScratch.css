@@ -14,8 +14,18 @@
 
 #container {
     display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
 }
 
+/* @media screen and (max-width: 500px) {
+    #container {
+        flex-direction: column;
+    }
+}
+
+*/
 #container>#overlay {
     width: 12px;
     height: 12px;

@@ -15,6 +15,9 @@ export default function PreviewSwatch({ color, size, id }) {
   };
 
   function handleOnClick() {
+    if (!navigator.clipboard) {
+      return
+    }
     navigator.clipboard.writeText(color)
     setCopyPrompText("copied!")
   }
@@ -29,11 +32,12 @@ export default function PreviewSwatch({ color, size, id }) {
     >
       <div
         style={{
-          width: (size - isHovering * 4) + "px",
-          height: (size - isHovering * 4) + "px",
+          width: (size - isHovering * 6) + "px",
+          height: (size - isHovering * 6) + "px",
           background: color,
           ...(isHovering && {
-            borderRadius: "2px",
+            borderRadius: "0px",
+            borderWidth: "3px",
             borderColor: "black",
             borderStyle: "solid"
           })
@@ -46,6 +50,7 @@ export default function PreviewSwatch({ color, size, id }) {
             position: "absolute",
             left: size + "px",
             width: "max-content",
+            zIndex: 1,
           }}
         >
           <div style={{
