@@ -11,7 +11,8 @@ import {
     drawBall,
     drawBezierLines,
     getColorAtPoint,
-    drawNBezierSamples
+    drawNBezierSamples,
+    clampXY
 } from './helpers/helpers';
 import tinycolor from "tinycolor2";
 
@@ -105,12 +106,16 @@ function PickerEditable() {
 
         const ctx = canvas.getContext('2d', { willReadFrequently: true })
         //Our first draw
-        ctx.fillStyle = '#f00000'
+        ctx.fillStyle = '#fff'
         for (let x = 0; x < ctx.canvas.width; x++) {
             let x_norm = x * 360 / ctx.canvas.width
-            for (let y = 0; y < ctx.canvas.height; y++) {
+            for (let y = 0; y <= ctx.canvas.height; y++) {
                 let y_norm = y * 100 / ctx.canvas.height
                 let color = tinycolor(`hsl(${x_norm}, ${saturation}, ${y_norm}%)`)
+
+                if (ctx.canvas.height - y === 0 && x <= 5) {
+                    console.log(x_norm, y_norm, color);
+                }
 
                 ctx.fillStyle = color.toRgbString()
                 ctx.fillRect(x, ctx.canvas.height - y, 1, 1);
@@ -181,7 +186,7 @@ function PickerEditable() {
                 x = e.touches[0].clientX - rect.left
                 y = e.touches[0].clientY - rect.top
             }
-            positions[closestBallIdx].data = [x, y]
+            positions[closestBallIdx].data = clampXY(x, y, rect)
             setDeepPositions(positions)
         }
 

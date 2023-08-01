@@ -114,11 +114,28 @@ function bezier(pts) {
   }
 }
 
+function clampXY(x, y, rect) {
+  if (x < 0) {
+    x = 0
+  }
+  else if (x > rect.width) {
+    x = rect.width
+  }
+  if (y < 0) {
+    y = 0
+  }
+  else if (y > rect.height) {
+    y = rect.height
+  }
+  return [x, y]
+}
+
 export {
   drawCurve,
   drawAllBalls,
   drawBall,
   drawBezierLines,
   getColorAtPoint,
-  drawNBezierSamples
+  drawNBezierSamples,
+  clampXY
 }
