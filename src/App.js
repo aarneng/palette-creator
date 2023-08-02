@@ -1,10 +1,12 @@
 import './App.css';
-import Canvas from "./canvas/canvas"
+import PaletteMaker from "./canvas/paletteMaker"
+import NavBar from './canvas/navbar';
 
 function App() {
   return (
     <div className="App">
-      <Canvas />
+      <NavBar />
+      <PaletteMaker />
       <div style={{ marginBottom: "500px" }}></div>
     </div>
   );

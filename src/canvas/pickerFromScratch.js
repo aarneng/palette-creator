@@ -5,6 +5,7 @@ import ColorPreview from './components/colorPreview';
 import CurrentPalette from './components/currentPalette';
 import ExportPalette from "./components/exportPalette";
 import StateEditor from './components/stateEditor';
+import SaturationOffsetter from './components/saturationOffsetter';
 import {
     drawCurve,
     drawAllBalls,
@@ -62,7 +63,7 @@ function PickerEditable() {
     const [deepPositions, setDeepPositions] = useState(
         [
             {
-                "data": [50, 50],
+                "data": [120, 200],
                 "edgePoint": true,
                 "optional": false
             },
@@ -77,7 +78,7 @@ function PickerEditable() {
                 "optional": true
             },
             {
-                "data": [120, 200],
+                "data": [50, 50],
                 "edgePoint": true,
                 "optional": false
             },
@@ -88,6 +89,14 @@ function PickerEditable() {
     const [deepBezierChecked, setBezierChecked] = React.useState(false);
     let bezierChecked = deepBezierChecked
     const [currentPalette, setCurrentPalette] = useState([])
+
+    const [deepSaturationoffsets, setDeepSaturationoffsets] = useState(new Array(numSamples).fill(0))
+    let saturationOffsets = deepSaturationoffsets
+
+    function setSaturationOffsets(newOffsets) {
+        setDeepSaturationoffsets(newOffsets)
+        saturationOffsets(newOffsets)
+    }
 
     function setNumSamples(n) {
         setDeepSamples(n)
@@ -109,15 +118,13 @@ function PickerEditable() {
         ctx.fillStyle = '#fff'
         for (let x = 0; x < ctx.canvas.width; x++) {
             let x_norm = x * 360 / ctx.canvas.width
-            for (let y = 0; y <= ctx.canvas.height; y++) {
-                let y_norm = y * 100 / ctx.canvas.height
-                let color = tinycolor(`hsl(${x_norm}, ${saturation}, ${y_norm}%)`)
+            for (let y = 1; y <= ctx.canvas.height; y++) {
+                let y_norm = (y - 1) * 100 / (ctx.canvas.height - 1)
+                // let color = tinycolor(`hsl(${x_norm}, ${saturation}, ${y_norm}%)`)
 
-                if (ctx.canvas.height - y === 0 && x <= 5) {
-                    console.log(x_norm, y_norm, color);
-                }
+                // ctx.fillStyle = color.toRgbString()
 
-                ctx.fillStyle = color.toRgbString()
+                ctx.fillStyle = `hsl(${x_norm}, ${saturation * 100}%, ${y_norm}%)`
                 ctx.fillRect(x, ctx.canvas.height - y, 1, 1);
             }
         }
@@ -262,7 +269,14 @@ function PickerEditable() {
 
     function expandPalette() {
         let myPalette = [...currentPalette]
-        myPalette.push(colors)
+        let newColors = [...colors]
+        console.log(newColors);
+        for (let i in saturationOffsets) {
+            let color = tinycolor(newColors[i])
+            color.saturate(saturationOffsets[i])
+            newColors[i] = color
+        }
+        myPalette.push(newColors)
         setCurrentPalette(
             myPalette
         )
@@ -274,10 +288,10 @@ function PickerEditable() {
         drawEverything()
     };
 
-    return <div>
+    return <div style={{ marginTop: "75px" }}>
         <div>
             <CurrentPalette currentPalette={currentPalette} colors={colors} />
-            <ExportPalette currentPalette={currentPalette} />
+            <ExportPalette currentPalette={currentPalette} offsets={saturationOffsets} />
         </div>
         <h2>Change palette:</h2>
         <div id="container"
@@ -290,7 +304,7 @@ function PickerEditable() {
                 })
             }}
         >
-            <div style={{ padding: "20px", paddingBottom: "0" }}>
+            <div style={{ margin: "20px", paddingBottom: "0", overflow: "clip" }}>
                 <canvas
                     ref={canvasRef}
                     id="canvas"
@@ -340,6 +354,9 @@ function PickerEditable() {
                 onChange={handleBezierCheckedChange}
                 inputProps={{ 'aria-label': 'controlled' }}
             />
+        </div>
+        <div>
+            {/* <SaturationOffsetter offsets={saturationOffsets} setOffsets={setSaturationOffsets} /> */}
         </div>
         <div>
             <h2>
