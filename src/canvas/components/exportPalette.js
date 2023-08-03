@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 
 export default function ExportPalette({ currentPalette }) {
@@ -11,7 +11,19 @@ export default function ExportPalette({ currentPalette }) {
     setPaletteExportSize(val)
   }
 
+  const [errorMessage, setErrorMessage] = useState("")
+
+  useEffect(() => {
+    setErrorMessage("")
+    console.log("usestae");
+  }, [currentPalette])
+
   function exportPalette() {
+    console.log(currentPalette);
+    if (currentPalette.length === 0) {
+      setErrorMessage("Your palette is empty! Add something to it before exporting")
+      return
+    }
     let paletteCanvas = document.createElement("canvas")
     let paletteCtx = paletteCanvas.getContext("2d")
     let maxLen = Math.max(...currentPalette.map(i => i.length))
@@ -53,6 +65,9 @@ export default function ExportPalette({ currentPalette }) {
           value={paletteExportSize}
           onChange={onPaletteExportSizeChange}
         /> export size (px)
+      </div>
+      <div style={{ color: "red" }}>
+        {errorMessage}
       </div>
       <button onClick={exportPalette}>export!</button>
     </>

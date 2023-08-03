@@ -10,14 +10,16 @@ export default function CurrentPalette({ currentPalette, colors }) {
         <div>
           {currentPalette.map((currElement, index) => {
             return (
-              <div key={index} style={{ display: "flex" }}>
+              <div key={"currentPaletteFullPaletteRow" + index} style={{ display: "flex" }}>
                 {currElement.map((innerElement, innerIndex) => {
                   return (
                     <div style={{
                       width: 40 + "px",
                       height: 40 + "px",
                       background: innerElement
-                    }}>
+                    }}
+                      key={"currentPaletteFullPaletteRow" + index + "Child" + innerIndex}
+                    >
 
                     </div>
                   )
@@ -34,7 +36,7 @@ export default function CurrentPalette({ currentPalette, colors }) {
         }}>
           {
             colors.map((currElement, index) => <div
-              key={index}
+              key={"previewPalette" + index}
               style={{
                 width: 40 + "px",
                 height: 40 + "px",

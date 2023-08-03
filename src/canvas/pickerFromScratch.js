@@ -6,6 +6,7 @@ import CurrentPalette from './components/currentPalette';
 import ExportPalette from "./components/exportPalette";
 import StateEditor from './components/stateEditor';
 import SaturationOffsetter from './components/saturationOffsetter';
+import MovableCanvas from './movableCanvas';
 import {
     drawCurve,
     drawAllBalls,
@@ -31,7 +32,7 @@ import tinycolor from "tinycolor2";
  * git push origin master
  */
 
-function PickerEditable() {
+export default function PickerEditable() {
     /**
      * 
      * note to whomever ventures here:
@@ -40,51 +41,73 @@ function PickerEditable() {
      * 
      */
 
-    const [saturation, setSaturation] = useState(0.60)
+    const [saturation, setSaturation] = useState(60)
     const [deepSamples, setDeepSamples] = useState(7)
     let numSamples = deepSamples
     const [colors, setColors] = useState(Array.from({ length: numSamples }, (_, index) => {
         return "green"
     }))
 
-    // const [ballPosition, setBallPosition] = useState(0.70);
-
     const [deepCloned, setDeepCloned] = useState(null)
     let cloned = deepCloned
-    const [canvasElement, setCanvasElement] = useState(null)
-    const [deepClosestBallIdx, setDeepClosestBallIdx] = useState(-1)
-    let closestBallIdx = deepClosestBallIdx
-    let closestBallLenSquared = Infinity
+
     const [deepCanvasSize, setDeepCanvasSize] = useState(getWH());
     let canvasSize = deepCanvasSize
 
-    const canvasRef = useRef(null)
 
-    const [deepPositions, setDeepPositions] = useState(
-        [
-            {
-                "data": [120, 200],
-                "edgePoint": true,
-                "optional": false
-            },
-            {
-                "data": [80, 90],
-                "edgePoint": false,
-                "optional": false
-            },
-            {
-                "data": [30, 170],
-                "edgePoint": false,
-                "optional": true
-            },
-            {
-                "data": [50, 50],
-                "edgePoint": true,
-                "optional": false
-            },
-        ]
-    )
-    let positions = deepPositions
+    let positions = [
+        {
+            "data": [120, 200],
+            "edgePoint": true,
+            "optional": false,
+            "movable": [true, true]
+        },
+        {
+            "data": [80, 90],
+            "edgePoint": false,
+            "optional": false,
+            "movable": [true, true]
+        },
+        {
+            "data": [30, 170],
+            "edgePoint": false,
+            "optional": true,
+            "movable": [true, true]
+        },
+        {
+            "data": [50, 50],
+            "edgePoint": true,
+            "optional": false,
+            "movable": [true, true]
+        },
+    ]
+
+    let saturationDeltaPositions = [
+        {
+            "data": [5, 50],
+            "edgePoint": true,
+            "optional": false,
+            "movable": [false, true]
+        },
+        {
+            "data": [97, 50],
+            "edgePoint": false,
+            "optional": false,
+            "movable": [true, true]
+        },
+        {
+            "data": [193, 50],
+            "edgePoint": false,
+            "optional": true,
+            "movable": [true, true]
+        },
+        {
+            "data": [295, 50],
+            "edgePoint": true,
+            "optional": false,
+            "movable": [false, true]
+        },
+    ]
 
     const [deepBezierChecked, setBezierChecked] = React.useState(false);
     let bezierChecked = deepBezierChecked
@@ -93,49 +116,77 @@ function PickerEditable() {
     const [deepSaturationoffsets, setDeepSaturationoffsets] = useState(new Array(numSamples).fill(0))
     let saturationOffsets = deepSaturationoffsets
 
-    function setSaturationOffsets(newOffsets) {
+    function setSaturationOffsets(offsets) {
+        let newOffsets = new Array(offsets.length)
+        for (let i in offsets) {
+            // 100 is a magic number referring to height 
+            // of canvas i'm too lazt to variablize it rn 
+            let offsetAmt = offsets[i][1]
+            offsetAmt = 100 - offsetAmt * 2
+            offsetAmt = offsetAmt / 100 * 20
+            newOffsets[i] = offsetAmt
+        }
         setDeepSaturationoffsets(newOffsets)
-        saturationOffsets(newOffsets)
+        saturationOffsets = newOffsets
     }
 
     function setNumSamples(n) {
         setDeepSamples(n)
         numSamples = n
-        drawEverything()
     }
 
-
     var timeout = false;
-    useEffect(() => {
-        const canvas = canvasRef.current
-        // setCanvasElement(canvas)
 
-        canvas.width = canvasSize[0]
-        canvas.height = canvasSize[1]
-
-        const ctx = canvas.getContext('2d', { willReadFrequently: true })
-        //Our first draw
+    function drawColorBackground(ctx) {
         ctx.fillStyle = '#fff'
         for (let x = 0; x < ctx.canvas.width; x++) {
             let x_norm = x * 360 / ctx.canvas.width
             for (let y = 1; y <= ctx.canvas.height; y++) {
                 let y_norm = (y - 1) * 100 / (ctx.canvas.height - 1)
-                // let color = tinycolor(`hsl(${x_norm}, ${saturation}, ${y_norm}%)`)
 
-                // ctx.fillStyle = color.toRgbString()
-
-                ctx.fillStyle = `hsl(${x_norm}, ${saturation * 100}%, ${y_norm}%)`
+                ctx.fillStyle = `hsl(${x_norm}, ${saturation}%, ${y_norm}%)`
                 ctx.fillRect(x, ctx.canvas.height - y, 1, 1);
             }
         }
-        setDeepPositions(positions)
-        cloned = canvas.cloneNode(true).getContext('2d', { willReadFrequently: true });
-        cloned.drawImage(canvas, 0, 0);
+
+        cloned = ctx.canvas.cloneNode(true).getContext('2d', { willReadFrequently: true });
+        cloned.drawImage(ctx.canvas, 0, 0);
         setDeepCloned(cloned)
-        drawEverything()
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, [saturation, deepCanvasSize])
+    }
+
+    function drawSaturationDeltaBackground(ctx) {
+        let w = ctx.canvas.width
+        let h = ctx.canvas.height
+
+        ctx.fillStyle = "#fff"
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.strokeStyle = "#000"
+
+        ctx.strokeWidth = 2
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2 + .5);
+        ctx.lineTo(w, h / 2 + .5);
+        ctx.stroke();
+
+        ctx.strokeWidth = 1
+        ctx.beginPath();
+        ctx.moveTo(0, h / 4 + .5);
+        ctx.lineTo(w, h / 4 + .5);
+        ctx.stroke();
+
+        ctx.strokeWidth = 1
+        ctx.beginPath();
+        ctx.moveTo(0, 3 * h / 4 + .5);
+        ctx.lineTo(w, 3 * h / 4 + .5);
+        ctx.stroke();
+
+        ctx.fillStyle = "#000"
+        ctx.font = "14px serif";
+        ctx.fillText("+0", w - 20, h / 2 - 5);
+        ctx.fillText("+10", w - 20, h / 4 - 5);
+        ctx.fillText("-10", w - 20, 3 * h / 4 - 5);
+    }
 
     function handleResize() {
         clearTimeout(timeout);
@@ -179,103 +230,28 @@ function PickerEditable() {
         return [w, h]
     }
 
-    function drawEverything(e) {
-        const canvas = canvasRef.current
-        const ctx = canvas.getContext("2d")
-
-        ctx.lineWidth = 2;
-
-        if (e) {
-            var rect = canvas.getBoundingClientRect()
-            var x = e.clientX - rect.left
-            var y = e.clientY - rect.top
-            if (e.type === "touchstart" || e.type === "touchmove") {
-                x = e.touches[0].clientX - rect.left
-                y = e.touches[0].clientY - rect.top
-            }
-            positions[closestBallIdx].data = clampXY(x, y, rect)
-            setDeepPositions(positions)
+    function setBezierSamplePoints(pointPositions) {
+        let newColors = new Array(pointPositions.length)
+        for (let i in pointPositions) {
+            let x = pointPositions[i][0]
+            let y = pointPositions[i][1]
+            let color = getColorAtPoint(x, y, cloned)
+            color = tinycolor(color)
+            // console.log("here", saturationOffsets[i]);
+            color.saturate(saturationOffsets[i])
+            newColors[i] = color.toHexString().toUpperCase()
         }
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        ctx.drawImage(cloned.canvas, 0, 0);
-
-        drawCurve(bezierChecked, positions, ctx)
-
-        drawAllBalls(positions, bezierChecked, cloned, ctx)
-
-        if (bezierChecked) {
-            drawBezierLines(positions, ctx)
-        }
-        drawNBezierSamples(numSamples, positions, setColors, bezierChecked, ctx, cloned)
-    }
-
-    function findAndSetClosestBallIdx(e) {
-        const canvas = canvasRef.current
-        let rect = canvas.getBoundingClientRect()
-        let x = e.clientX - rect.left
-        let y = e.clientY - rect.top
-        if (e.type === "touchstart" || e.type === "touchmove") {
-            x = e.touches[0].clientX - rect.left
-            y = e.touches[0].clientY - rect.top
-        }
-
-        closestBallIdx = -1
-        closestBallLenSquared = Infinity
-
-        for (let i in positions) {
-            if (positions[i].optional && !bezierChecked) {
-                continue
-            }
-            let dx = positions[i].data[0] - x
-            let dy = positions[i].data[1] - y
-            let len = dx * dx + dy * dy
-            if (len < closestBallLenSquared) {
-                closestBallIdx = i
-                closestBallLenSquared = len
-            }
-        }
-
-        setDeepClosestBallIdx(closestBallIdx)
-    }
-
-    function onMouseDown(e) {
-        // touch event check
-        if (e.type === "mousedown") {
-            e.preventDefault()
-        }
-        if (e.type === "mousedown" && e.buttons !== 1) {
-            return
-        }
-        findAndSetClosestBallIdx(e)
-        drawEverything(e)
-    }
-
-    function onDrag(e) {
-        // touch event check
-        if (e.type === "mousemove") {
-            e.preventDefault()
-        }
-        if (e.type === "mousemove" && e.buttons !== 1) {
-            return
-        }
-        drawEverything(e)
-    }
-
-    function onMouseUp(e) {
-        e.preventDefault()
-        return
+        setColors(newColors)
     }
 
     function expandPalette() {
         let myPalette = [...currentPalette]
         let newColors = [...colors]
-        console.log(newColors);
-        for (let i in saturationOffsets) {
-            let color = tinycolor(newColors[i])
-            color.saturate(saturationOffsets[i])
-            newColors[i] = color
-        }
+        // for (let i in saturationOffsets) {
+        //     let color = tinycolor(newColors[i])
+        //     color.saturate(saturationOffsets[i])
+        //     newColors[i] = color
+        // }
         myPalette.push(newColors)
         setCurrentPalette(
             myPalette
@@ -285,7 +261,6 @@ function PickerEditable() {
     const handleBezierCheckedChange = (event) => {
         bezierChecked = event.target.checked
         setBezierChecked(event.target.checked);
-        drawEverything()
     };
 
     return <div style={{ marginTop: "75px" }}>
@@ -305,31 +280,40 @@ function PickerEditable() {
             }}
         >
             <div style={{ margin: "20px", paddingBottom: "0", overflow: "clip" }}>
-                <canvas
-                    ref={canvasRef}
-                    id="canvas"
-                    width="400px"
-                    height="400px"
-
-                    style={{
-                        touchAction: "none"
-                    }}
-
-                    onMouseDown={onMouseDown}
-                    onMouseMove={onDrag}
-                    onMouseUp={onMouseUp}
-
-                    onTouchStart={onMouseDown}
-                    onTouchMove={onDrag}
-                    onTouchEnd={onMouseUp}
+                <MovableCanvas
+                    width={400}
+                    height={400}
+                    pointLocations={positions}
+                    drawBackground={drawColorBackground}
+                    id="canvasColorPicker"
+                    setBezierSamplePoints={setBezierSamplePoints}
+                    reRenderCanvasOn={[saturation, deepCanvasSize]}
+                    numSamples={numSamples}
+                    bezierChecked={bezierChecked}
+                    reRenderExtra={[saturationOffsets]}
                 />
+                <div>
+                    finetune the saturation:
+                    <MovableCanvas
+                        width={300}
+                        height={100}
+                        pointLocations={saturationDeltaPositions}
+                        drawBackground={drawSaturationDeltaBackground}
+                        id="canvasSaturationDelta"
+                        setBezierSamplePoints={setSaturationOffsets}
+                        reRenderCanvasOn={[]}
+                        numSamples={numSamples}
+                        bezierChecked={true}
+                        reRenderExtra={[]}
+                    />
+                </div>
             </div>
             <ColorPreview colors={colors} dimensions={canvasSize} />
         </div>
         <StateEditor
-            min={0.0}
-            max={1.0}
-            stepSize={0.01}
+            min={0}
+            max={100}
+            stepSize={1}
             value={saturation}
             setValue={setSaturation}
             name="saturation"
@@ -356,9 +340,6 @@ function PickerEditable() {
             />
         </div>
         <div>
-            {/* <SaturationOffsetter offsets={saturationOffsets} setOffsets={setSaturationOffsets} /> */}
-        </div>
-        <div>
             <h2>
                 input image to use your new palette with it!
             </h2>
@@ -367,5 +348,3 @@ function PickerEditable() {
     </div>
 }
 
-
-export { PickerEditable }

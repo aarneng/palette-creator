@@ -17,13 +17,14 @@ export default function ColorPreview({ colors, dimensions }) {
     <div id="colorPreview"
       style={{
         ...(window.screen.width <= size + size / 5 && {
-          display: "flex"
+          display: "flex",
+          top: "-10px"
         })
       }}
     >
       {
         colors.map((currElement, index) => <PreviewSwatch
-          key={index}
+          key={"colorPreviewSize" + index}
           color={currElement}
           size={Math.min(size / colors.length, size / 5)}
           id={"previewSwatch" + index}

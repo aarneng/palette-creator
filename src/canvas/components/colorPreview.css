@@ -1,5 +1,7 @@
 #colorPreview {
     display: block;
+    top: -70px;
+    position: relative;
     /* width: var(--canvas-max-width); */
 }
 

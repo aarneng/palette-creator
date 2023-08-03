@@ -33,14 +33,20 @@ function drawAllBalls(positions, bezierChecked, cloned, ctx) {
     }
     let isEdgePoint = positions[i].edgePoint
 
+    let fillColor = isEdgePoint ?
+      getColorAtPoint(positions[i].data[0], positions[i].data[1], cloned) :
+      "#000";
+
+    // console.log(tinycolor(fillColor));
+
+    let outlineColor = invertColor(fillColor)
+
     drawBall(
       positions[i].data[0],
       positions[i].data[1],
       isEdgePoint ? 8 : 4,
-      "#fff",
-      isEdgePoint ?
-        getColorAtPoint(positions[i].data[0], positions[i].data[1], cloned) :
-        "#000",
+      outlineColor,
+      fillColor,
       ctx
     )
   }
@@ -68,7 +74,6 @@ function drawBezierLines(positions, ctx) {
   ctx.lineTo(positions[3].data[0], positions[3].data[1]);
   ctx.stroke()
 
-  ctx.lineWidth = 2;
 }
 
 function getColorAtPoint(x, y, canvas) {
@@ -95,7 +100,7 @@ function drawNBezierSamples(n, positions, setColors, bezierChecked, ctx, cloned)
     }
     // squares[t].props.style.background = color
     // setColors(squares)
-    squares[t] = color
+    squares[t] = [x, y]
   }
   setColors(squares)
 }
@@ -130,6 +135,41 @@ function clampXY(x, y, rect) {
   return [x, y]
 }
 
+function invertColor(hex) {
+  if (hex.indexOf('#') === 0) {
+    hex = hex.slice(1);
+  }
+  // convert 3-digit hex to 6-digits.
+  if (hex.length === 3) {
+    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+  }
+  if (hex.length !== 6) {
+    throw new Error('Invalid HEX color.');
+  }
+  // invert color components
+  var r = (255 - parseInt(hex.slice(0, 2), 16)).toString(16),
+    g = (255 - parseInt(hex.slice(2, 4), 16)).toString(16),
+    b = (255 - parseInt(hex.slice(4, 6), 16)).toString(16);
+  // pad each with zeros and return
+  return '#' + padZero(r) + padZero(g) + padZero(b);
+}
+
+function padZero(str, len) {
+  len = len || 2;
+  var zeros = new Array(len).join('0');
+  return (zeros + str).slice(-len);
+}
+
+function getXY(e, rect) {
+  let x = e.clientX - rect.left
+  let y = e.clientY - rect.top
+  if (e.type === "touchstart" || e.type === "touchmove") {
+    x = e.touches[0].clientX - rect.left
+    y = e.touches[0].clientY - rect.top
+  }
+  return clampXY(x, y, rect)
+}
+
 export {
   drawCurve,
   drawAllBalls,
@@ -137,5 +177,6 @@ export {
   drawBezierLines,
   getColorAtPoint,
   drawNBezierSamples,
-  clampXY
+  clampXY,
+  getXY
 }
